@@ -28,6 +28,21 @@ typedef struct
     char value[256];
 } Token;
 
+char *TypeName[14] = {
+    "identifier",
+    "number",
+    "function",
+    "return",
+    "print",
+    "assign",
+    "plus",
+    "minus",
+    "multiply",
+    "divide",
+    "left-bracket",
+    "right-bracket",
+    "comma"};
+
 Token get_next_token(const char **origin_p)
 {
     // skip space
@@ -110,7 +125,7 @@ void match(TokenType expected)
     }
     else
     {
-        printf("Syntax error: expected %d\n", expected);
+        printf("Syntax error: expected %s\n", TypeName[expected]);
         exit(1);
     }
 }
@@ -136,7 +151,7 @@ void match_zero_or_more_2(TokenType expected1, TokenType expected2)
         }
         else
         {
-            printf("Syntax error in parameters\n");
+            printf("Syntax error in parameters: expect %s\n", TypeName[expected2]);
             exit(1);
         }
     }
