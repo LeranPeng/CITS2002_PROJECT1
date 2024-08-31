@@ -67,6 +67,8 @@ _deps
 bin
 .cmake
 DartConfiguration.tcl
+cmake-*
+build
 
 ### CMake Patch ###
 # External projects
