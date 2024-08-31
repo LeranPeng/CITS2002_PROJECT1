@@ -8,6 +8,7 @@
 #include <ctype.h>
 #include <string.h>
 #include "../includes/pre_process.h"
+#include "../includes/parser.h"
 
 int main(int argc, char *argv[])
 {
@@ -30,11 +31,13 @@ int main(int argc, char *argv[])
         fprintf(stdout, ".ml file open successfully\n");
         char **result_pre_process;
         result_pre_process = pre_process(ml_file);
-        // Test
-        for (int j = 0; j < 10; j++)
-        {
-            printf("Line %d: %s", j + 1, result_pre_process[j]);
-            free(result_pre_process[j]);
-        }
+        // TODO: Delete Test Code
+        // for (int j = 0; j < 10; j++)
+        // {
+        //     printf("Line %d: %s", j + 1, result_pre_process[j]);
+        //     free(result_pre_process[j]);
+        // }
+        parser(result_pre_process);
+        // TODO: Free space after all done
     }
 }
