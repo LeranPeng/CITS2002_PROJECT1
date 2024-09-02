@@ -133,8 +133,8 @@ int main() {
     FILE *output = fopen("output.c", "w");
 
     if (input == NULL || output == NULL) {
-        printf("Error opening file.\n");
-        return 1;
+        fprintf(stderr, ".ml file open error\n");
+        exit(EXIT_FAILURE);
     }
 
     translate_ml_to_c(input, output);
@@ -142,7 +142,7 @@ int main() {
     fclose(input);
     fclose(output);
 
-    printf("Translation complete.\n");
-
+    fprintf(stdout, ".ml file has translated successfully.")
+        
     return 0;
 }
