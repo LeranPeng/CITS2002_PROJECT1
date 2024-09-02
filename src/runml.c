@@ -136,13 +136,6 @@ void translate_ml_to_c(FILE *input, FILE *output) {
     }
 }
 
-// Function to display usage message
-void print_usage(const char *program_name) {
-    fprintf(stderr, "Usage: %s input.ml output.c\n", program_name);
-}
-
-
-
 int main(int argc, char *argv[])
 {
     if (argc != 3) {
