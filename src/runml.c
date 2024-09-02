@@ -7,8 +7,6 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
-#include "../includes/pre_process.h"
-#include "../includes/parser.h"
 
 #define MAX_LINE_LENGTH 256
 #define MAX_IDENTIFIERS 50
@@ -76,102 +74,98 @@ void translate_expression(char *expression, FILE *output) {
     }
 }
 
+
 // Function to translate ML code to C11
 void translate_ml_to_c(FILE *input, FILE *output) {
-    char line[MAX_LINE_LENGTH];
+    char line[256];
+
+    fprintf(output, "#include <stdio.h>\n");
+    fprintf(output, "#include <stdlib.h>\n");
+    fprintf(output, "#include <ctype.h>\n");
+    fprintf(output, "#include <string.h>\n");
+    fprintf(output,"\n");
+
+    fprintf(output, "int main() {\n");
 
     while (fgets(line, sizeof(line), input)) {
-        char *trimmed_line = trim_whitespace(line);
 
-        // Check for function definition
-        if (strncmp(trimmed_line, "function", 8) == 0) {
-            char func_name[13];
-            char params[100];
-            sscanf(trimmed_line, "function %12s (%[^)])", func_name, params);
+        char *trimmed_line = strtok(line, "\n");
 
-            fprintf(output, "double %s(%s) {\n", func_name, params);
+
+        if (trimmed_line[0] == '#') {
+            continue;
         }
-            
-        // Check for assignment statement
-        else if (strstr(trimmed_line, "<--") != NULL) {
-            char identifier[13];
-            char expression[200];
-            sscanf(trimmed_line, "%12s <-- %[^\n]", identifier, expression);
 
-            int id = find_or_add_identifier(identifier);
-            if (id != -1 && !identifiers[id].initialized) {
-                fprintf(output, "    double %s = 0.0;\n", identifiers[id].name);
-                identifiers[id].initialized = 1;
-            }
 
-            fprintf(output, "    %s = ", identifier);
-            translate_expression(expression, output);
-            fprintf(output, ";\n");
+        char *assign_op = strstr(trimmed_line, "<-");
+        if (assign_op != NULL) {
+            *assign_op = '\0';  // 将字符串从 '<--' 处分割
+            char *identifier = trimmed_line;
+            char *expression = assign_op + 3;
+            fprintf(output, "    double %s = %s;\n", identifier, expression);
         }
-        // Check for print statement
+
         else if (strncmp(trimmed_line, "print", 5) == 0) {
             char expression[200];
             sscanf(trimmed_line, "print %[^\n]", expression);
-
-            fprintf(output, "    printf(\"%%lf\\n\", ");
-            translate_expression(expression, output);
-            fprintf(output, ");\n");
+            fprintf(output, "    printf(\"%%lf\\n\", %s);\n", expression);
         }
-        // Check for return statement
+
+        else if (strncmp(trimmed_line, "function", 8) == 0) {
+            char func_name[13];
+            char params[100];
+            sscanf(trimmed_line, "function %12s (%[^)])", func_name, params);
+            fprintf(output, "double %s(%s) {\n", func_name, params);
+        }
+
         else if (strncmp(trimmed_line, "return", 6) == 0) {
             char expression[200];
             sscanf(trimmed_line, "return %[^\n]", expression);
-
-            fprintf(output, "    return ");
-            translate_expression(expression, output);
-            fprintf(output, ";\n");
+            fprintf(output, "    return %s;\n", expression);
         }
-        // Check for function call
+
         else if (strchr(trimmed_line, '(') != NULL && strchr(trimmed_line, ')') != NULL) {
             fprintf(output, "    %s;\n", trimmed_line);
         }
-        // Close function definition
+
         else if (trimmed_line[0] == '\0') {
             fprintf(output, "}\n");
         }
     }
+
+    fprintf(output, "    return 0;\n");
+    fprintf(output, "}\n");
 }
 
-
-
-
-
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     if (argc != 3) {
-        print_usage(argv[0]);
-        exit(EXIT_FAILURES);
-    }
-
-    
-    FILE *input = fopen(argv[1], "r");
-    if (input == NULL)
-    {
-        fprintf(stderr, "Error: Cannot open input file %s\n", argv[1]);
+        fprintf(stderr, "Usage: %s <input_ml_file> <output_c_file>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
-    
+
+    FILE *input = fopen(argv[1], "r");
+    if (input == NULL) {
+        perror("Error opening input file");
+        exit(EXIT_FAILURE);
+    }
+
     FILE *output = fopen(argv[2], "w");
     if (output == NULL) {
-        fprintf(stderr, "Error: Cannot open output file %s\n", argv[2]);
+        perror("Error opening output file");
         fclose(input);
         exit(EXIT_FAILURE);
     }
 
-    fprintf(stdout, ".ml file open successfully\n");
     translate_ml_to_c(input, output);
-    fclose(input);   
-    fprintf(stdout, "Translation complete. Output written to %s\n", argv[2]);
 
-    fclose(output); // should be changed. compile the output in c11.
+    fflush(output);
+    fclose(input);
+    fclose(output);
 
-    exit(EXIT_SUCCESS);
+    printf("Translation complete. Output written to %s\n", argv[2]);
 
+    return 0;
+}
 
         //char **result_pre_process;
         //result_pre_process = pre_process(ml_file);
@@ -183,5 +177,3 @@ int main(int argc, char *argv[])
         // }
         //parser(result_pre_process);
         // TODO: Free space after all done
-    }
-}
