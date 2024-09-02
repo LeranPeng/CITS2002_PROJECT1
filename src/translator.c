@@ -141,7 +141,6 @@ int main() {
     fclose(input);
     fclose(output);
 
-    fprintf(stdout, ".ml file has translated successfully.")
-        
-    return 0;
+    fprintf(stdout, ".ml file has translated successfully.");
+    
 }
