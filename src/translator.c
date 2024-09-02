@@ -6,7 +6,6 @@
 #define MAX_LINE_LENGTH 256
 #define MAX_IDENTIFIERS 50
 
-//Store identifiers and their initialization state
 typedef struct {
     char name[13];
     int initialized;
