@@ -142,6 +142,7 @@ void print_usage(const char *program_name) {
 }
 
 
+
 int main(int argc, char *argv[])
 {
     if (argc != 3) {
@@ -166,10 +167,11 @@ int main(int argc, char *argv[])
 
     fprintf(stdout, ".ml file open successfully\n");
     translate_ml_to_c(input, output);
-    fclose(input);
-    fclose(output);
+    fclose(input);   
     fprintf(stdout, "Translation complete. Output written to %s\n", argv[2]);
-    
+
+    fclose(output); // should be changed. compile the output in c11.
+
 
         //char **result_pre_process;
         //result_pre_process = pre_process(ml_file);
@@ -179,7 +181,7 @@ int main(int argc, char *argv[])
         //     printf("Line %d: %s", j + 1, result_pre_process[j]);
         //     free(result_pre_process[j]);
         // }
-        parser(result_pre_process);
+        //parser(result_pre_process);
         // TODO: Free space after all done
     }
 }
