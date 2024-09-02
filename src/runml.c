@@ -172,6 +172,8 @@ int main(int argc, char *argv[])
 
     fclose(output); // should be changed. compile the output in c11.
 
+    exit(EXIT_SUCCESS);
+
 
         //char **result_pre_process;
         //result_pre_process = pre_process(ml_file);
