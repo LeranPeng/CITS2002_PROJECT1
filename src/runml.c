@@ -91,6 +91,7 @@ void translate_ml_to_c(FILE *input, FILE *output) {
 
             fprintf(output, "double %s(%s) {\n", func_name, params);
         }
+            
         // Check for assignment statement
         else if (strstr(trimmed_line, "<--") != NULL) {
             char identifier[13];
