@@ -2,7 +2,9 @@
 #define _CONST_H
 
 #define MAX_LINES 100
-#define MAX_CHARS 255
+#define MAX_CHARS 256
 #define MAX_LENGTH MAX_LINES *MAX_CHARS
+#define MAX_SYMBOLS 50
+#define MAX_IDENTIFIER_LENGTH 13
 
 #endif

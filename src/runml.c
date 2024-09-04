@@ -9,6 +9,7 @@
 #include <string.h>
 #include "../includes/pre_process.h"
 #include "../includes/parser.h"
+#include "../includes/symbol_table.h"
 
 int main(int argc, char *argv[])
 {
@@ -37,7 +38,8 @@ int main(int argc, char *argv[])
         //     printf("Line %d: %s", j + 1, result_pre_process[j]);
         //     free(result_pre_process[j]);
         // }
-        parser(result_pre_process);
+        char *tokens = parser(result_pre_process);
+        symbol_table_start(tokens);
         // TODO: Free space after all done
     }
 }
