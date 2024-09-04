@@ -19,10 +19,12 @@ typedef enum
     TOKEN_LPAREN,
     TOKEN_RPAREN,
     TOKEN_COMMA,
+    TOKEN_TAB,
+    TOKEN_FEED,
     TOKEN_UNKNOWN,
 } TokenType;
 
-typedef struct
+typedef struct Token
 {
     TokenType type;
     char value[256];
@@ -43,11 +45,32 @@ char *TypeName[14] = {
     "right-bracket",
     "comma"};
 
+char tokens[MAX_LENGTH];
+// current Token
+Token current_token;
+// point to origin_input
+const char *origin_p = NULL;
+
 Token get_next_token(const char **origin_p)
 {
     // skip space
     while (**origin_p && isspace(**origin_p))
+    {
+        Token token = {TOKEN_UNKNOWN, ""}; // 默认类型为 TOKEN_OTHER
+        if (**origin_p == '\n')
+        {
+            token.type = TOKEN_FEED;
+        }
+        else if (**origin_p == '\t')
+        {
+            token.type = TOKEN_TAB;
+        }
         (*origin_p)++;
+        if (token.type != TOKEN_UNKNOWN)
+        {
+            return token;
+        }
+    }
 
     if (isdigit(**origin_p))
     {
@@ -105,16 +128,19 @@ Token get_next_token(const char **origin_p)
     }
 }
 
-char origin[MAX_LENGTH] = "";
-// point to origin
-const char *origin_p = NULL;
-Token current_token;
-
 void next_token()
 {
     current_token = get_next_token(&origin_p);
+    if (current_token.type != TOKEN_UNKNOWN)
+    {
+        sprintf(tokens + strlen(tokens), "[%d,%s]", current_token.type, current_token.value);
+        if (current_token.type == TOKEN_FEED)
+        {
+            sprintf(tokens + strlen(tokens), "\n");
+        }
+    }
     // TODO: Delete Test Code
-    printf("currentToken:%s\n", current_token.value);
+    // printf("currentToken:%d-%s\n", current_token.type, current_token.value);
 }
 
 void match(TokenType expected)
@@ -157,8 +183,8 @@ void match_zero_or_more_2(TokenType expected1, TokenType expected2)
     }
 }
 
-void expression(int can_be_empty);
-void function_call();
+void expression();
+void function_call_parameter();
 
 int factor()
 {
@@ -169,7 +195,7 @@ int factor()
         if (current_token.type == TOKEN_LPAREN)
         {
             next_token();
-            function_call();
+            function_call_parameter();
         }
     }
     else if (current_token.type == TOKEN_NUMBER)
@@ -178,7 +204,7 @@ int factor()
     }
     else if (current_token.type == TOKEN_LPAREN)
     {
-        expression(0);
+        expression();
         match(TOKEN_RPAREN);
     }
     else
@@ -188,9 +214,9 @@ int factor()
     return 0;
 }
 
-void term(int can_be_empty)
+void term()
 {
-    if (factor() == -1 && !can_be_empty)
+    if (factor() == -1)
     {
         printf("Syntax error in expression\n");
         exit(1);
@@ -202,25 +228,32 @@ void term(int can_be_empty)
     }
 }
 
-void expression(int can_be_empty)
+void expression()
 {
-    term(can_be_empty);
+    term();
     if (current_token.type == TOKEN_PLUS || current_token.type == TOKEN_MINUS)
     {
         next_token();
-        expression(0);
+        expression();
     }
 }
 
-void function_call()
+void function_call_parameter()
 {
-    expression(1);
-    if (current_token.type == TOKEN_IDENTIFIER)
+    if (current_token.type == TOKEN_RPAREN)
     {
         next_token();
-        match_zero_or_more_2(TOKEN_COMMA, TOKEN_IDENTIFIER);
     }
-    match(TOKEN_RPAREN);
+    else
+    {
+        expression();
+        while (current_token.type == TOKEN_COMMA)
+        {
+            next_token();
+            expression();
+        }
+        match(TOKEN_RPAREN);
+    }
 }
 
 void statement()
@@ -232,24 +265,25 @@ void statement()
         if (current_token.type == TOKEN_LPAREN)
         {
             next_token();
-            function_call();
+            function_call_parameter();
         }
         else
         {
             match(TOKEN_ASSIGN);
-            expression(0);
+            expression();
         }
     }
     else if (current_token.type == TOKEN_PRINT || current_token.type == TOKEN_RETURN)
     {
         next_token();
-        expression(0);
+        expression();
     }
     else
     {
         printf("Syntax error in statement\n");
         exit(1);
     }
+    match(TOKEN_FEED);
 }
 
 void program_item()
@@ -259,7 +293,12 @@ void program_item()
         next_token();
         match(TOKEN_IDENTIFIER);
         match_zero_or_more(TOKEN_IDENTIFIER);
-        statement();
+        match(TOKEN_FEED);
+        while (current_token.type == TOKEN_TAB)
+        {
+            next_token();
+            statement();
+        }
     }
     else
     {
@@ -267,25 +306,21 @@ void program_item()
     }
 }
 
-void parser(char **input_lines)
+char *parser(char **input_lines)
 {
     // array splicing
+    char splicing_result[MAX_LENGTH] = "";
     for (int i = 0; i < MAX_LINES && input_lines[i] != NULL; i++)
     {
-        sprintf(origin + strlen(origin), "%s ", input_lines[i]);
+        sprintf(splicing_result + strlen(splicing_result), "%s", input_lines[i]);
     }
 
-    // delete last space
-    size_t len = strlen(origin);
-    if (len > 0)
-    {
-        origin[len - 1] = '\0';
-    }
-    origin_p = origin;
+    origin_p = splicing_result;
     next_token();
     while (current_token.type != TOKEN_UNKNOWN)
     {
         program_item();
     }
     printf("Parsing completed successfully!\n");
+    return tokens;
 }
