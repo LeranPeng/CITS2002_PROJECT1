@@ -14,14 +14,25 @@
 #include "pre_process.c"
 
 
-
 char c_code[MAX_LENGTH];
 char function_definitions[MAX_LENGTH];
 
 
+int is_integer(const char *num_str) {
+    char *end_ptr;
+    double num = strtod(num_str, &end_ptr);
+    return (num == (int)num);
+}
+
+
 void generate_c_code(const char *token_type, const char *token_value, int is_in_function) {
     if (strcmp(token_type, "2") == 0) { // TOKEN_NUMBER
-        sprintf(c_code + strlen(c_code), "%s", token_value);
+        // 如果是数字类型，判断是整数还是小数，并相应地格式化
+        if (is_integer(token_value)) {
+            sprintf(c_code + strlen(c_code), "%d", atoi(token_value));  // 整数
+        } else {
+            sprintf(c_code + strlen(c_code), "%.6f", atof(token_value));  // 小数
+        }
     } else if (strcmp(token_type, "0") == 0) { // TOKEN_IDENTIFIER
         sprintf(c_code + strlen(c_code), "%s", token_value);
     } else if (strcmp(token_type, "5") == 0) { // TOKEN_ASSIGN
@@ -45,7 +56,11 @@ void generate_c_code(const char *token_type, const char *token_value, int is_in_
             sprintf(c_code + strlen(c_code), "return ");
         }
     } else if (strcmp(token_type, "4") == 0) { // TOKEN_PRINT
-        sprintf(c_code + strlen(c_code), "printf(\"%%f\", ");
+        // print 函数，处理整数和浮点数的不同打印
+        sprintf(c_code + strlen(c_code), "if (is_integer(");
+        sprintf(c_code + strlen(c_code), "%s)) { printf(\"%%d\", ", token_value);
+        sprintf(c_code + strlen(c_code), "%s); } else { printf(\"%%.6f\", ", token_value);
+        sprintf(c_code + strlen(c_code), "%s); }", token_value);
     } else if (strcmp(token_type, "13") == 0) { // TOKEN_COMMA
         sprintf(c_code + strlen(c_code), ", ");
     } else if (strcmp(token_type, "14") == 0) { // TOKEN_TAB
@@ -76,6 +91,7 @@ void process_line_for_c(char *line, int is_in_function)
 }
 
 
+
 char *translate_to_c(char *input_lines)
 {
     // 初始化生成的 C 代码
@@ -89,18 +105,20 @@ char *translate_to_c(char *input_lines)
     int is_in_function = 0;
 
 
+    // 遍历每一行
     while (line != NULL)
     {
-
+        // 判断是否是函数定义
         if (strstr(line, "function") != NULL)
         {
             is_in_function = 1;
             sprintf(function_definitions + strlen(function_definitions), "void ");
         }
 
-
+        // 处理每一行 token
         process_line_for_c(line, is_in_function);
 
+        // 如果是函数结束，停止处理函数内容
         if (is_in_function && strstr(line, "return") != NULL)
         {
             sprintf(function_definitions + strlen(function_definitions), ";\n}\n");
@@ -108,7 +126,7 @@ char *translate_to_c(char *input_lines)
         }
 
         if (!is_in_function) {
-            sprintf(c_code + strlen(c_code), ";\n");
+            sprintf(c_code + strlen(c_code), ";\n"); //add comma
         }
 
         line = strtok_r(NULL, "\n", &line_ptr);
@@ -125,6 +143,8 @@ char *translate_to_c(char *input_lines)
     printf("C Code Translation Completed!\n");
     return function_definitions;
 }
+
+
 
 int main(int argc, char *argv[])
 {
@@ -153,7 +173,6 @@ int main(int argc, char *argv[])
         fclose(input);
         exit(EXIT_FAILURE);
     }
-
 
     fflush(output);
     fclose(input);
