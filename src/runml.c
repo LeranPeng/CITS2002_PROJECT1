@@ -7,156 +7,123 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
-#include "../includes/pre_process.h"
-#include "../includes/parser.h"
-#include "../includes/symbol_table.h"
+#include "includes/pre_process.h"
+#include "includes/symbol_table.h"
+#include "includes/parser.h"
+#include "symbol_table.c"
+#include "pre_process.c"
 
-#define MAX_LINE_LENGTH 256
-#define MAX_IDENTIFIERS 50
 
-typedef struct
-{
-    char name[13];
-    int initialized;
-} Identifier;
 
-Identifier identifiers[MAX_IDENTIFIERS];
-int identifier_count = 0;
+char c_code[MAX_LENGTH];
+char function_definitions[MAX_LENGTH];
 
-// Function to trim leading and trailing whitespace from a string
-char *trim_whitespace(char *str)
-{
-    char *end;
 
-    // Trim leading space
-    while (isspace((unsigned char)*str))
-        str++;
-
-    if (*str == 0) // All spaces?
-        return str;
-
-    // Trim trailing space
-    end = str + strlen(str) - 1;
-    while (end > str && isspace((unsigned char)*end))
-        end--;
-
-    // Write new null terminator
-    *(end + 1) = 0;
-
-    return str;
-}
-
-// Function to find or add an identifier
-int find_or_add_identifier(const char *name)
-{
-    for (int i = 0; i < identifier_count; i++)
-    {
-        if (strcmp(identifiers[i].name, name) == 0)
-        {
-            return i;
+void generate_c_code(const char *token_type, const char *token_value, int is_in_function) {
+    if (strcmp(token_type, "2") == 0) { // TOKEN_NUMBER
+        sprintf(c_code + strlen(c_code), "%s", token_value);
+    } else if (strcmp(token_type, "0") == 0) { // TOKEN_IDENTIFIER
+        sprintf(c_code + strlen(c_code), "%s", token_value);
+    } else if (strcmp(token_type, "5") == 0) { // TOKEN_ASSIGN
+        sprintf(c_code + strlen(c_code), " = ");
+    } else if (strcmp(token_type, "6") == 0) { // TOKEN_PLUS
+        sprintf(c_code + strlen(c_code), " + ");
+    } else if (strcmp(token_type, "7") == 0) { // TOKEN_MINUS
+        sprintf(c_code + strlen(c_code), " - ");
+    } else if (strcmp(token_type, "8") == 0) { // TOKEN_MULTIPLY
+        sprintf(c_code + strlen(c_code), " * ");
+    } else if (strcmp(token_type, "9") == 0) { // TOKEN_DIVIDE
+        sprintf(c_code + strlen(c_code), " / ");
+    } else if (strcmp(token_type, "11") == 0) { // TOKEN_LPAREN
+        sprintf(c_code + strlen(c_code), "(");
+    } else if (strcmp(token_type, "12") == 0) { // TOKEN_RPAREN
+        sprintf(c_code + strlen(c_code), ")");
+    } else if (strcmp(token_type, "3") == 0) { // TOKEN_RETURN
+        if (is_in_function) {
+            sprintf(function_definitions + strlen(function_definitions), "return ");
+        } else {
+            sprintf(c_code + strlen(c_code), "return ");
+        }
+    } else if (strcmp(token_type, "4") == 0) { // TOKEN_PRINT
+        sprintf(c_code + strlen(c_code), "printf(\"%%f\", ");
+    } else if (strcmp(token_type, "13") == 0) { // TOKEN_COMMA
+        sprintf(c_code + strlen(c_code), ", ");
+    } else if (strcmp(token_type, "14") == 0) { // TOKEN_TAB
+        if (is_in_function) {
+            sprintf(function_definitions + strlen(function_definitions), "    "); // translate tab to indentation
+        } else {
+            sprintf(c_code + strlen(c_code), "    "); // translate tab to indentation
         }
     }
-    if (identifier_count < MAX_IDENTIFIERS)
-    {
-        strncpy(identifiers[identifier_count].name, name, 12);
-        identifiers[identifier_count].name[12] = '\0';
-        identifiers[identifier_count].initialized = 0;
-        return identifier_count++;
-    }
-    return -1; // Error: too many identifiers
 }
 
-// Function to handle expressions
-void translate_expression(char *expression, FILE *output)
+
+void process_line_for_c(char *line, int is_in_function)
 {
-    char *token = strtok(expression, " ");
+    char *token_ptr;
+    char *token = strtok_r(line, "[]", &token_ptr);
+
     while (token != NULL)
     {
-        int id = find_or_add_identifier(token);
-        if (id != -1 && isalpha(token[0]))
-        {
-            if (!identifiers[id].initialized)
-            {
-                fprintf(output, "    double %s = 0.0;\n", identifiers[id].name);
-                identifiers[id].initialized = 1;
-            }
-            fprintf(output, "%s ", identifiers[id].name);
-        }
-        else
-        {
-            fprintf(output, "%s ", token);
-        }
-        token = strtok(NULL, " ");
+        char token_type[3];
+        char token_value[MAX_IDENTIFIER_LENGTH];
+        splitString(token, token_type, token_value);
+
+        generate_c_code(token_type, token_value, is_in_function);
+
+        token = strtok_r(NULL, "[]", &token_ptr);
     }
 }
 
-// Function to translate ML code to C11
-void translate_ml_to_c(FILE *input, FILE *output)
+
+char *translate_to_c(char *input_lines)
 {
-    char line[256];
+    // 初始化生成的 C 代码
+    strcpy(c_code, "#include <stdio.h>\n\n");
 
-    fprintf(output, "#include <stdio.h>\n");
-    fprintf(output, "#include <stdlib.h>\n");
-    fprintf(output, "#include <ctype.h>\n");
-    fprintf(output, "#include <string.h>\n");
-    fprintf(output, "\n");
+    // 函数定义部分单独生成
+    strcpy(function_definitions, "");
 
-    fprintf(output, "int main() {\n");
+    char *line_ptr;
+    char *line = strtok_r(input_lines, "\n", &line_ptr);
+    int is_in_function = 0;
 
-    while (fgets(line, sizeof(line), input))
+
+    while (line != NULL)
     {
 
-        char *trimmed_line = strtok(line, "\n");
-
-        if (trimmed_line[0] == '#')
+        if (strstr(line, "function") != NULL)
         {
-            continue;
+            is_in_function = 1;
+            sprintf(function_definitions + strlen(function_definitions), "void ");
         }
 
-        char *assign_op = strstr(trimmed_line, "<-");
-        if (assign_op != NULL)
+
+        process_line_for_c(line, is_in_function);
+
+        if (is_in_function && strstr(line, "return") != NULL)
         {
-            *assign_op = '\0'; // 从 '<-' 处分割
-            char *identifier = trimmed_line;
-            char *expression = assign_op + 3;
-            fprintf(output, "    double %s = %s;\n", identifier, expression);
+            sprintf(function_definitions + strlen(function_definitions), ";\n}\n");
+            is_in_function = 0;
         }
 
-        else if (strncmp(trimmed_line, "print", 5) == 0)
-        {
-            char expression[200];
-            sscanf(trimmed_line, "print %[^\n]", expression);
-            fprintf(output, "    printf(\"%%lf\\n\", %s);\n", expression);
+        if (!is_in_function) {
+            sprintf(c_code + strlen(c_code), ";\n");
         }
 
-        else if (strncmp(trimmed_line, "function", 8) == 0)
-        {
-            char func_name[13];
-            char params[100];
-            sscanf(trimmed_line, "function %12s (%[^)])", func_name, params);
-            fprintf(output, "double %s(%s) {\n", func_name, params);
-        }
-
-        else if (strncmp(trimmed_line, "return", 6) == 0)
-        {
-            char expression[200];
-            sscanf(trimmed_line, "return %[^\n]", expression);
-            fprintf(output, "    return %s;\n", expression);
-        }
-
-        else if (strchr(trimmed_line, '(') != NULL && strchr(trimmed_line, ')') != NULL)
-        {
-            fprintf(output, "    %s;\n", trimmed_line);
-        }
-
-        else if (trimmed_line[0] == '\0')
-        {
-            fprintf(output, "}\n");
-        }
+        line = strtok_r(NULL, "\n", &line_ptr);
     }
 
-    fprintf(output, "    return 0;\n");
-    fprintf(output, "}\n");
+    // 结束 C 代码
+    sprintf(c_code + strlen(c_code), "int main() {\n");
+    sprintf(c_code + strlen(c_code), "    // Main program\n");
+    sprintf(c_code + strlen(c_code), "    return 0;\n}\n");
+
+    // 将函数定义部分拼接到 C 代码的头部
+    strcat(function_definitions, c_code);
+
+    printf("C Code Translation Completed!\n");
+    return function_definitions;
 }
 
 int main(int argc, char *argv[])
@@ -174,14 +141,8 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    char **result_pre_process;
-    result_pre_process = pre_process(input);
-    // TODO: Delete Test Code
-    // for (int j = 0; j < 10; j++)
-    // {
-    //     printf("Line %d: %s", j + 1, result_pre_process[j]);
-    //     free(result_pre_process[j]);
-    // }
+    char **result_pre_process = pre_process(input);
+
     char *tokens = parser(result_pre_process);
     symbol_table_start(tokens);
 
@@ -193,7 +154,6 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    translate_ml_to_c(input, output);
 
     fflush(output);
     fclose(input);
