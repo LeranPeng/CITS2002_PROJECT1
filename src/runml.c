@@ -116,7 +116,7 @@ void translate_ml_to_c(FILE *input, FILE *output)
         char *assign_op = strstr(trimmed_line, "<-");
         if (assign_op != NULL)
         {
-            *assign_op = '\0'; // 将字符串从 '<--' 处分割
+            *assign_op = '\0'; // 从 '<-' 处分割
             char *identifier = trimmed_line;
             char *expression = assign_op + 3;
             fprintf(output, "    double %s = %s;\n", identifier, expression);
