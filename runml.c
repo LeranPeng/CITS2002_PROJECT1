@@ -1,4 +1,6 @@
 //  CITS2002 Project 1 2024
+//  Student 1: Runzhi Zhao
+//  Student 2: Leran Peng
 //  Platform: Linux
 
 #include <stdio.h>
